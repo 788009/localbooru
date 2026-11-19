@@ -28,6 +28,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.5",
     "@vitejs/plugin-vue": "^6.0.11",
+    "smol-toml": "^1.9.1",
     "tailwindcss": "^4.3.5",
     "vite": "^8.3.8"
   }

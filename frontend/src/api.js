@@ -1,7 +1,11 @@
 import axios from 'axios'
 
+const host = __API_HOST__ || window.location.hostname
+const port = __API_PORT__ || 8000
+const serverOrigin = `http://${host}:${port}`
+
 const api = axios.create({
-  baseURL: 'http://10.194.0.100:8000/api'
+  baseURL: `${serverOrigin}/api`
 })
 
 export default {
@@ -18,6 +22,6 @@ export default {
     return api.get(`/images/${id}/detail`).then(res => res.data)
   },
   getImageUrl(id) {
-    return `http://10.194.0.100:8000/api/images/${id}/file`
+    return `${serverOrigin}/api/images/${id}/file`
   }
 }
