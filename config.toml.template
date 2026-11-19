@@ -1,0 +1,16 @@
+[storage]
+tags_file = "../data/tags.json"
+directories = [
+    "images/1/",
+    "images/2/"
+]
+default_selected = [
+    "images/1/"
+]
+
+[ui]
+default_page_size = 50
+
+[server]
+port = 8000
+host = "0.0.0.0"
