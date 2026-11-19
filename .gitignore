@@ -1,5 +1,7 @@
-.env
-config.toml
+.env/
 data/
-__pycache__
-node_modules
+__pycache__/
+node_modules/
+dist/
+
+config.toml
