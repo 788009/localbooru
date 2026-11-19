@@ -53,13 +53,17 @@
         class="sm:hidden absolute inset-0 bg-black bg-opacity-50 z-20"
       ></div>
 
-      <!-- 右侧图片网格 -->
-      <main class="flex-1 p-2 sm:p-4 overflow-y-auto h-full" @scroll="handleScroll">
-        <div v-if="images.length === 0 && !loading" class="text-center text-gray-500 mt-20">
+      <!-- 右侧主要内容区 -->
+      <main ref="mainContent" class="flex-1 p-2 sm:p-4 overflow-y-auto h-full flex flex-col">
+        <div v-if="images.length === 0 && !loading" class="text-center text-gray-500 mt-20 flex-1">
           没有找到匹配的图片
         </div>
         
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4">
+        <div v-if="loading" class="text-center py-6 text-gray-400 flex-1 flex items-center justify-center">
+          <span class="inline-block animate-pulse text-lg">加载中...</span>
+        </div>
+
+        <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4 flex-1 content-start">
           <div v-for="img in images" :key="img.id" 
                class="aspect-square bg-gray-800 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 group relative"
                @click="openImage(img.id)">
@@ -67,8 +71,35 @@
           </div>
         </div>
 
-        <div v-if="loading" class="text-center py-6 text-gray-400">
-          <span class="inline-block animate-pulse">加载中...</span>
+        <!-- 分页控件 -->
+        <div v-if="totalPages > 1 && !loading" class="mt-6 mb-4 flex flex-wrap justify-center items-center gap-2">
+          <button 
+            @click="changePage(1)" 
+            :disabled="currentPage === 1"
+            class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded border border-gray-700 transition-colors"
+          >首页</button>
+          
+          <button 
+            @click="changePage(currentPage - 1)" 
+            :disabled="currentPage === 1"
+            class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded border border-gray-700 transition-colors"
+          >上一页</button>
+          
+          <span class="px-4 py-1 text-gray-300">
+            第 {{ currentPage }} 页 / 共 {{ totalPages }} 页
+          </span>
+          
+          <button 
+            @click="changePage(currentPage + 1)" 
+            :disabled="currentPage === totalPages"
+            class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded border border-gray-700 transition-colors"
+          >下一页</button>
+          
+          <button 
+            @click="changePage(totalPages)" 
+            :disabled="currentPage === totalPages"
+            class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded border border-gray-700 transition-colors"
+          >尾页</button>
         </div>
       </main>
     </div>
@@ -84,7 +115,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from './api'
 import SearchBar from './components/SearchBar.vue'
 import ImageModal from './components/ImageModal.vue'
@@ -96,12 +127,17 @@ const searchTags = ref([])
 const images = ref([])
 const totalItems = ref(0)
 const loading = ref(false)
-const isSidebarOpen = ref(false) // 控制移动端侧边栏
+const isSidebarOpen = ref(false)
+const mainContent = ref(null) // 用于翻页后回到顶部
 
-// 分页
-const skip = ref(0)
+// 分页状态
+const currentPage = ref(1)
 const limit = ref(50)
-const hasMore = ref(true)
+
+// 计算总页数
+const totalPages = computed(() => {
+  return Math.ceil(totalItems.value / limit.value) || 1
+})
 
 // Modal
 const showModal = ref(false)
@@ -121,35 +157,30 @@ onMounted(async () => {
 })
 
 const resetAndSearch = async () => {
-  skip.value = 0
+  currentPage.value = 1
   images.value = []
-  hasMore.value = true
   if (window.innerWidth < 640) {
-      isSidebarOpen.value = false // 移动端搜索或切换目录后自动收起侧边栏
+      isSidebarOpen.value = false
   }
   await loadImages()
 }
 
 const loadImages = async () => {
-  if (loading.value || !hasMore.value) return
+  if (loading.value) return
   loading.value = true
   
   try {
+    const skip = (currentPage.value - 1) * limit.value
     const res = await api.search({
       tags: searchTags.value,
       directories: selectedDirs.value,
-      skip: skip.value,
+      skip: skip,
       limit: limit.value
     })
     
-    images.value.push(...res.items)
+    // 直接替换数据，而非追加
+    images.value = res.items
     totalItems.value = res.total
-    
-    if (images.value.length >= res.total) {
-      hasMore.value = false
-    } else {
-      skip.value += limit.value
-    }
   } catch (error) {
     console.error("搜索失败:", error)
   } finally {
@@ -157,10 +188,15 @@ const loadImages = async () => {
   }
 }
 
-const handleScroll = (e) => {
-  const target = e.target
-  if (target.scrollTop + target.clientHeight >= target.scrollHeight - 200) {
-    loadImages()
+const changePage = async (page) => {
+  if (page < 1 || page > totalPages.value || page === currentPage.value) return
+  
+  currentPage.value = page
+  await loadImages()
+  
+  // 翻页后将主内容区滚动回顶部
+  if (mainContent.value) {
+    mainContent.value.scrollTop = 0
   }
 }
 
