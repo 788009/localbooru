@@ -20,7 +20,13 @@
       
       <!-- 信息区 -->
       <div class="w-full md:w-80 bg-gray-900 md:bg-gray-800 p-4 md:rounded-lg md:overflow-y-auto border-t md:border border-gray-800 md:border-gray-700 shrink-0">
-        <h2 class="text-xl font-bold mb-4 break-all text-gray-100">{{ detail?.filename }}</h2>
+        <h2
+          @click="showFullPath = !showFullPath"
+          :title="showFullPath ? '点击显示文件名' : '点击显示完整路径'"
+          class="text-xl font-bold mb-4 break-all text-gray-100 cursor-pointer hover:text-blue-400 transition-colors"
+        >
+          {{ showFullPath ? detail?.path : detail?.filename }}
+        </h2>
         <a :href="imageUrl" target="_blank" class="block text-center bg-blue-600 hover:bg-blue-700 text-white py-2 rounded mb-6 transition-colors">
           查看原图
         </a>
@@ -43,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import api from '../api'
 
 const props = defineProps(['imgId', 'show'])
@@ -51,6 +57,7 @@ const emit = defineEmits(['close', 'add-tag'])
 
 const detail = ref(null)
 const imageUrl = ref('')
+const showFullPath = ref(false)
 
 // 监听弹窗状态以控制底层页面的滚动
 watch(() => props.show, (isShow) => {
@@ -67,6 +74,7 @@ onUnmounted(() => {
 
 watch(() => props.imgId, async (newId) => {
   if (newId) {
+    showFullPath.value = false
     imageUrl.value = api.getImageUrl(newId)
     detail.value = await api.getImageDetail(newId)
   }
